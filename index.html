@@ -19,6 +19,7 @@
 <meta name="apple-mobile-web-app-title" content="대동울타리 카탈로그">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.5/kakao.min.js" integrity="sha384-v6JKY3z4FUkWq21oZDHZe74YvuPk/WUrVLrDHTBojHXClOSa3iXy7sCXPY1jkFbj" crossorigin="anonymous"></script>
 <style>
 /* VOICE: 차분하고 단정한 B2B 제품 카탈로그
    IDEA: 실제 인쇄 카탈로그를 손으로 넘기는 느낌 — 종이가 휘며 넘어가는 페이지
@@ -68,6 +69,8 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
 .ghost{background:#fff;color:#2A1150;border-color:#cfc3e2}
 #editBtn{display:none}
 #installBtn{background:#C9A24A;color:#2A1150;border-color:#C9A24A;font-weight:700}
+#kakaoShareBtn{background:#FEE500;color:#191600;border-color:#FEE500;font-weight:700;display:none}
+#kakaoShareBtn.ready{display:inline-flex}
 /* 2026-11-25: "크게 보기" 버튼 방식 대신 마우스 스크롤(휠)·손가락 핀치로 직접 확대/축소하는 방식으로 교체 */
 #stage.zoomed{overflow:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch;cursor:grab;-webkit-user-select:none;user-select:none}
 #stage.zoomed #wrap{margin:0 auto}
@@ -86,7 +89,7 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
   footer button{padding:0 10px;min-height:34px;min-width:34px;font-size:13px}
   #first,#last{display:none}
   .hint{font-size:11px;bottom:2px}
-  #pdfBtn,#installBtn{min-height:34px;padding:0 12px;font-size:13px}
+  #pdfBtn,#installBtn,#kakaoShareBtn{min-height:34px;padding:0 12px;font-size:13px}
 }
 </style>
 </head>
@@ -95,7 +98,8 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
   <h1><b>DDF</b>대동울타리 제품 카탈로그</h1>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><a id="pdfBtn" href="대동울타리_제품카탈로그.pdf" download style="display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid #C9A24A;background:#3D1F6B;color:#fff;text-decoration:none;font-size:15px">PDF 다운로드</a><button id="editBtn" type="button" style="display:none">주요 사양 수정</button>
   <label><span style="position:absolute;left:-9999px">목차로 이동</span><select id="toc" aria-label="목차로 이동"></select></label>
-  <button id="installBtn" type="button">📲 앱 설치</button></div>
+  <button id="installBtn" type="button">📲 앱 설치</button>
+  <button id="kakaoShareBtn" type="button">💬 카카오톡 공유</button></div>
 </header>
 <div id="zoomhint" class="zoomhint">100%</div>
 <main id="stage">
@@ -372,6 +376,34 @@ if ("serviceWorker" in navigator) {
       }
     };
   }
+})();
+// 카카오톡 공유하기 — 링크를 그냥 텍스트로 붙여넣는 대신, 표지 사진+제목+버튼이 달린
+// 카드 형태로 전송한다(2026-11-25, 피싱처럼 안 보이게 하기 위한 요청). file://로
+// 열었을 때는 도메인이 없어 Kakao SDK가 작동하지 않으므로 인터넷 링크로 열었을
+// 때만 버튼을 노출한다. JAVASCRIPT_KEY는 카카오 개발자센터(이 웹주소를
+// JavaScript SDK 도메인에 등록한 뒤) 앱 키 탭에서 발급받아 아래에 채워 넣는다.
+(function(){
+  const KAKAO_JS_KEY = ""; // TODO: 카카오 개발자센터 JavaScript 키
+  const btn = document.getElementById("kakaoShareBtn");
+  if (!btn || location.protocol === "file:" || typeof Kakao === "undefined" || !KAKAO_JS_KEY) return;
+  try {
+    Kakao.init(KAKAO_JS_KEY);
+    if (!Kakao.isInitialized()) return;
+  } catch(_) { return; }
+  btn.classList.add("ready");
+  btn.onclick = () => {
+    const url = location.href.split("#")[0];
+    Kakao.Share.sendDefault({
+      objectType: "feed",
+      content: {
+        title: "대동울타리 제품 카탈로그",
+        description: "휀스·난간·공공디자인 휀스·조경시설 · 27개 제품군",
+        imageUrl: new URL("icon-512.png", url).href,
+        link: { mobileWebUrl: url, webUrl: url }
+      },
+      buttons: [{ title: "카탈로그 보기", link: { mobileWebUrl: url, webUrl: url } }]
+    });
+  };
 })();
 </script>
 </body>
