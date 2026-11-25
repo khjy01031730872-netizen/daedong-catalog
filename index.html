@@ -68,6 +68,7 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
 .ghost{background:#fff;color:#2A1150;border-color:#cfc3e2}
 #editBtn{display:none}
 #bigBtn{background:#3D1F6B}
+#installBtn{background:#C9A24A;color:#2A1150;border-color:#C9A24A;font-weight:700}
 .fsbtn{position:fixed;top:8px;right:8px;z-index:50;min-width:0;min-height:36px;padding:0 14px;font-size:13px;display:none}
 .panbtn{position:fixed;top:50%;margin-top:-26px;z-index:50;width:44px;height:52px;border-radius:12px;border:1px solid var(--gold);
   background:rgba(42,17,80,.82);color:#fff;font-size:20px;display:none;align-items:center;justify-content:center}
@@ -88,7 +89,7 @@ body.immersive .hint{display:none}
   footer button{padding:0 10px;min-height:34px;min-width:34px;font-size:13px}
   #first,#last{display:none}
   .hint{font-size:11px;bottom:2px}
-  #pdfBtn,#bigBtn{min-height:34px;padding:0 12px;font-size:13px}
+  #pdfBtn,#bigBtn,#installBtn{min-height:34px;padding:0 12px;font-size:13px}
 }
 </style>
 </head>
@@ -97,7 +98,8 @@ body.immersive .hint{display:none}
   <h1><b>DDF</b>대동울타리 제품 카탈로그</h1>
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><a id="pdfBtn" href="대동울타리_제품카탈로그.pdf" download style="display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid #C9A24A;background:#3D1F6B;color:#fff;text-decoration:none;font-size:15px">PDF 다운로드</a><button id="editBtn" type="button" style="display:none">주요 사양 수정</button>
   <label><span style="position:absolute;left:-9999px">목차로 이동</span><select id="toc" aria-label="목차로 이동"></select></label>
-  <button id="bigBtn" type="button">⤢ 크게 보기</button></div>
+  <button id="bigBtn" type="button">⤢ 크게 보기</button>
+  <button id="installBtn" type="button">📲 앱 설치</button></div>
 </header>
 <button id="exitBig" class="fsbtn" type="button" aria-label="원래 화면으로">✕ 축소</button>
 <button id="panL" class="panbtn" type="button" aria-label="왼쪽으로 이동">‹</button>
@@ -284,6 +286,28 @@ document.getElementById("form").addEventListener("submit",async e=>{
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
+// "앱 설치" 버튼 — 인터넷 링크(https)로 열었을 때만 동작한다(다운로드 파일은
+// manifest를 못 불러와 설치 자체가 불가능 — 실측 확인, 2026-11-25).
+(function(){
+  let deferredPrompt = null;
+  const btn = document.getElementById("installBtn");
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+  window.addEventListener("appinstalled", () => { deferredPrompt = null; });
+  if (btn) {
+    btn.onclick = async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      } else {
+        alert("아이폰(사파리): 하단 공유 버튼(⬆) 누르고 \"홈 화면에 추가\"를 선택하세요.\n\n안드로이드: 브라우저 메뉴(⋮)에서 \"앱 설치\" 또는 \"홈 화면에 추가\"를 선택하세요.");
+      }
+    };
+  }
+})();
 </script>
 </body>
 </html>
