@@ -69,6 +69,10 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
 #editBtn{display:none}
 #bigBtn{background:#3D1F6B}
 .fsbtn{position:fixed;top:8px;right:8px;z-index:50;min-width:0;min-height:36px;padding:0 14px;font-size:13px;display:none}
+.panbtn{position:fixed;top:50%;margin-top:-26px;z-index:50;width:44px;height:52px;border-radius:12px;border:1px solid var(--gold);
+  background:rgba(42,17,80,.82);color:#fff;font-size:20px;display:none;align-items:center;justify-content:center}
+#panL{left:4px}#panR{right:4px}
+body.immersive .panbtn{display:flex}
 body.immersive header,body.immersive footer{display:none}
 body.immersive .fsbtn{display:inline-flex;align-items:center}
 body.immersive main{padding:10px 0 16px;justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
@@ -96,6 +100,8 @@ body.immersive .hint{display:none}
   <button id="bigBtn" type="button">⤢ 크게 보기</button></div>
 </header>
 <button id="exitBig" class="fsbtn" type="button" aria-label="원래 화면으로">✕ 축소</button>
+<button id="panL" class="panbtn" type="button" aria-label="왼쪽으로 이동">‹</button>
+<button id="panR" class="panbtn" type="button" aria-label="오른쪽으로 이동">›</button>
 <main id="stage">
   <div id="wrap"><div id="book"></div></div>
   <div id="err">넘김 효과를 불러오지 못했어요. 새로고침해 주세요.</div>
@@ -182,6 +188,10 @@ function setImmersive(on){
 }
 document.getElementById("bigBtn").onclick=()=>setImmersive(!document.body.classList.contains("immersive"));
 document.getElementById("exitBig").onclick=()=>setImmersive(false);
+// 크게 보기 상태에서는 책 위 드래그가 "페이지 넘기기"로 먼저 먹혀 손가락 스크롤이
+// 잘 안 먹을 수 있어, 좌우 이동 버튼을 별도로 둔다(2026-11-25 실측 신고 반영).
+document.getElementById("panL").onclick=()=>stage.scrollBy({left:-stage.clientWidth*0.85,behavior:"smooth"});
+document.getElementById("panR").onclick=()=>stage.scrollBy({left:stage.clientWidth*0.85,behavior:"smooth"});
 stage.addEventListener("dblclick",()=>setImmersive(!document.body.classList.contains("immersive")));
 let lastTapT=0;
 stage.addEventListener("touchend",()=>{
