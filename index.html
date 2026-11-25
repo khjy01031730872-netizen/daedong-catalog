@@ -28,14 +28,14 @@
 :root{color-scheme:light dark;--bg:light-dark(#e9e3f1,#140b26);--bar:#2A1150;--gold:#C9A24A;--ink:light-dark(#241B33,#EFE9F7);--muted:light-dark(#5E5270,#B9AECB)}
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
-html,body{height:100%}
+html,body{height:100vh;height:100dvh}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Noto Sans KR",system-ui,sans-serif;overflow:hidden;display:flex;flex-direction:column}
 header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px max(3vw,14px);background:var(--bar);color:#fff;flex:none;flex-wrap:wrap}
 header h1{margin:0;font-size:16px;font-weight:700;letter-spacing:.02em}
 header h1 b{color:var(--gold);margin-right:8px}
 select{font:inherit;font-size:16px;min-height:40px;padding:6px 10px;border-radius:8px;border:1px solid #6b4fa0;background:#3D1F6B;color:#fff;max-width:100%}
 select:focus-visible,button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
-main{flex:1;display:flex;align-items:center;justify-content:center;padding:14px 14px 34px;min-height:0;position:relative}
+main{flex:1 1 0;display:flex;align-items:center;justify-content:center;padding:14px 14px 34px;min-height:0;max-height:100%;position:relative;overflow:hidden}
 #wrap{margin:auto}
 .page{background:#fff;overflow:hidden;position:relative}
 .page img{width:100%;height:100%;display:block;object-fit:cover;user-select:none;-webkit-user-drag:none}
@@ -118,7 +118,12 @@ toc.innerHTML=TOC.map(([p,t])=>`<option value="${p}">${t} · p.${p}</option>`).j
 const imgs=[...bookEl.querySelectorAll("img[data-p]")];
 function load(i){ for(let k=Math.max(0,i-4);k<Math.min(N,i+6);k++){const im=imgs[k]; if(!im.src) im.src=src(k+1);} }
 function fit(){
-  const W=stage.clientWidth-28, H=stage.clientHeight-48;
+  const W=stage.clientWidth-28;
+  let H=stage.clientHeight-48;
+  // 일부 모바일 인앱 브라우저(카카오톡 내장뷰 등)는 flex 높이 계산이 틀어질 때가 있어
+  // stage.clientHeight가 비정상이면 뷰포트 기준으로 다시 계산한다(실측 버그 수정, 2026-11-25).
+  if(!H || H<200) H=(window.visualViewport?window.visualViewport.height:window.innerHeight)-160;
+  H=Math.max(200,H);
   const portrait=W<620;
   const pw=Math.max(portrait?160:300,Math.min(portrait?W:W/2, H*AR));
   wrap.style.width=(portrait?pw:pw*2)+"px";
