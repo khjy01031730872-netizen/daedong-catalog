@@ -69,7 +69,15 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
 #editBtn{display:none}
 @media(max-width:600px){.grid2{grid-template-columns:minmax(0,1fr)}}
 
-@media(max-width:600px){header h1{font-size:14px}#pg{min-width:70px}footer{gap:8px}footer button{padding:0 12px}.hint{font-size:12px}}
+@media(max-width:600px){
+  header h1{font-size:14px}
+  header{padding:6px max(3vw,10px)}
+  #pg{min-width:58px;font-size:13px}
+  footer{gap:6px;padding:4px 8px 6px}
+  footer button{padding:0 10px;min-height:34px;min-width:34px;font-size:13px}
+  #first,#last{display:none}
+  .hint{font-size:11px;bottom:2px}
+}
 </style>
 </head>
 <body>
