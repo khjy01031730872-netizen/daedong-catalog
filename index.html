@@ -69,8 +69,9 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
 #editBtn{display:none}
 #installBtn{background:#C9A24A;color:#2A1150;border-color:#C9A24A;font-weight:700}
 /* 2026-11-25: "크게 보기" 버튼 방식 대신 마우스 스크롤(휠)·손가락 핀치로 직접 확대/축소하는 방식으로 교체 */
-#stage.zoomed{overflow:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch}
+#stage.zoomed{overflow:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch;cursor:grab;-webkit-user-select:none;user-select:none}
 #stage.zoomed #wrap{margin:0 auto}
+#stage.zoomed.dragging{cursor:grabbing}
 .zoomhint{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:40;background:rgba(42,17,80,.85);
   color:#fff;border:1px solid var(--gold);border-radius:999px;padding:4px 12px;font-size:12px;pointer-events:none;
   opacity:0;transition:opacity .25s}
@@ -100,7 +101,7 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
 <main id="stage">
   <div id="wrap"><div id="book"></div></div>
   <div id="err">넘김 효과를 불러오지 못했어요. 새로고침해 주세요.</div>
-  <div class="hint">페이지 모서리를 끌거나 눌러서 넘기세요 · ← → 키 · 마우스 휠/손가락 벌리기로 확대·축소</div>
+  <div class="hint">페이지 모서리를 끌거나 눌러서 넘기세요 · ← → 키 · 마우스 휠/손가락 벌리기로 확대·축소 · 확대 후엔 끌어서 상하좌우 이동</div>
 </main>
 <footer>
   <button id="first" aria-label="처음으로">«</button>
@@ -202,32 +203,69 @@ stage.addEventListener("wheel",(e)=>{
   const delta=-e.deltaY*0.0016;
   applyZoom(zoomScale+delta);
 },{passive:false});
-// 두 손가락 핀치 확대/축소
+// 확대된 상태에서는 "넓힌 다음 옆/위/아래를 보는" 이동(팬) 기능이 반드시 같이 있어야 한다
+// (2026-11-25 사용자 명시 — 확대 기능과 짝을 이루는 필수 기능). 마우스 드래그·한손가락 끌기로
+// 상하좌우 스크롤 이동시킨다. 책 위 드래그는 StPageFlip 자체의 "넘기기" 제스처와 겹치므로,
+// 확대 중(zoomScale>1)에는 캡처 단계에서 가로채 PageFlip에 이벤트가 전달되기 전에 이동으로
+// 처리한다(100% 상태에서는 그대로 두어 기존 드래그-넘기기 동작을 유지).
+let isPanning=false, panX=0, panY=0, panSL=0, panST=0;
+function panStart(x,y){
+  isPanning=true;
+  stage.classList.add("dragging");
+  panX=x; panY=y;
+  panSL=stage.scrollLeft; panST=stage.scrollTop;
+}
+function panMove(x,y){
+  if(!isPanning) return;
+  stage.scrollLeft=panSL-(x-panX);
+  stage.scrollTop=panST-(y-panY);
+}
+function panEnd(){
+  if(isPanning){ isPanning=false; stage.classList.remove("dragging"); }
+}
+stage.addEventListener("mousedown",(e)=>{
+  if(zoomScale<=1.001) return;
+  e.preventDefault(); e.stopPropagation();
+  panStart(e.clientX, e.clientY);
+},{capture:true});
+addEventListener("mousemove",(e)=>{ if(isPanning) panMove(e.clientX, e.clientY); });
+addEventListener("mouseup", panEnd);
+addEventListener("mouseleave", panEnd);
+// 두 손가락 핀치 확대/축소 + 확대 중 한손가락 끌기 이동 (같은 캡처 리스너에서 분기).
 let pinchStartDist=0, pinchStartScale=1;
 stage.addEventListener("touchstart",(e)=>{
   if(e.touches.length===2){
+    e.stopPropagation();
+    panEnd();
     const [a,b]=e.touches;
     pinchStartDist=Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
     pinchStartScale=zoomScale;
+  } else if(e.touches.length===1 && zoomScale>1.001){
+    e.preventDefault(); e.stopPropagation();
+    panStart(e.touches[0].clientX, e.touches[0].clientY);
   }
-},{passive:true});
+},{capture:true, passive:false});
 stage.addEventListener("touchmove",(e)=>{
   if(e.touches.length===2){
-    e.preventDefault();
+    e.preventDefault(); e.stopPropagation();
     const [a,b]=e.touches;
     const dist=Math.hypot(b.clientX-a.clientX, b.clientY-a.clientY);
     if(pinchStartDist>0) applyZoom(pinchStartScale*(dist/pinchStartDist));
+  } else if(e.touches.length===1 && isPanning){
+    e.preventDefault(); e.stopPropagation();
+    panMove(e.touches[0].clientX, e.touches[0].clientY);
   }
-},{passive:false});
+},{capture:true, passive:false});
 // 더블클릭/더블탭 = 100%로 리셋 (기존 더블탭 인프라를 줌 리셋 용도로 재활용).
 stage.addEventListener("dblclick",()=>applyZoom(1));
 let lastTapT=0;
 stage.addEventListener("touchend",(e)=>{
+  panEnd();
   if(e.touches.length>0) return;
   const now=Date.now();
   if(now-lastTapT<350) applyZoom(1);
   lastTapT=now;
-});
+},{capture:true});
 try{
   pf=new St.PageFlip(bookEl,{width:794,height:1123,size:"stretch",minWidth:150,maxWidth:1600,minHeight:213,maxHeight:2263,showCover:true,usePortrait:false,flippingTime:550,maxShadowOpacity:0.55,drawShadow:true,mobileScrollSupport:false,showPageCorners:true,autoSize:true});
   pf.loadFromHTML(bookEl.querySelectorAll(".page"));
