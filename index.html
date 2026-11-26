@@ -69,13 +69,6 @@ footer button{width:100%;padding:0 6px}
 .sb .r span:first-child{color:#CBBBE3;flex:none}.sb .r span:last-child{font-weight:500;text-align:right}
 .sb .a{font-size:clamp(5px,calc(var(--u)*12),16px);color:#E4DAF2;line-height:1.9}
 .sb .n{margin-top:auto;font-size:clamp(4.5px,calc(var(--u)*11),15px);line-height:1.6;color:#CBBBE3}
-@media(max-width:600px){
-  /* 라벨|값을 좌우로 나누면 값 칸이 절반도 안 남아 단어 중간에서 끊기며
-     줄바꿈된다 — 라벨을 위로, 값을 아래 전체 폭으로 쌓아서 값이 쓸 수
-     있는 가로폭을 넓힌다. */
-  .sb .r{flex-direction:column;align-items:flex-start;gap:calc(var(--u)*2)}
-  .sb .r span:last-child{text-align:left}
-}
 .spec-modal{position:fixed;inset:0;z-index:60;display:none}
 .spec-modal.open{display:block}
 .spec-modal-backdrop{position:absolute;inset:0;background:rgba(20,11,38,.6)}
@@ -196,12 +189,17 @@ function fit(){
   // stage.clientHeight가 비정상이면 뷰포트 기준으로 다시 계산한다(실측 버그 수정, 2026-11-25).
   if(!H || H<200) H=(window.visualViewport?window.visualViewport.height:window.innerHeight)-160;
   H=Math.max(200,H);
-  // 2026-11-25: 사장님 요청으로 모바일 좁은 화면에서도 항상 펼침(두 페이지) 상태로 보이게 함
-  // (예전엔 W<620이면 한 페이지만 보이는 portrait 모드로 강제 전환했음).
+  // 2026-11-26 원상복구: 좁은 화면에서 "항상 두 페이지 펼침"을 강제했더니 페이지
+  // 실폭이 ~180px까지 줄어들어 "주요사양" 사이드바 글자가 어떤 크기로 조정해도
+  // 읽을 수 없는 수준으로 쪼그라드는 근본 원인이 됐다(실측 확인, 사장님 폰
+  // 스크린샷으로 반복 재현). 원래(최초 제작 당시)대로 좁은 화면(W<620)에서는
+  // 한 페이지씩 꽉 차게 보여줘 페이지 실폭을 2배 이상 확보 — 넓은 화면(태블릿·
+  // PC)은 그대로 두 페이지 펼침 유지.
   // zoomScale(마우스 휠/핀치로 조절)만큼 실제 렌더 크기를 키운다 — 1보다 커지면
   // 화면보다 넓어져서 스크롤로 이동하며 보게 된다("크게 보기" 버튼 방식 대체).
-  const pw=Math.max(75,Math.min(W/2, H*AR))*zoomScale;
-  wrap.style.width=(pw*2)+"px";
+  const portrait=W<620;
+  const pw=Math.max(portrait?160:300,Math.min(portrait?W:W/2, H*AR))*zoomScale;
+  wrap.style.width=(portrait?pw:pw*2)+"px";
 }
 let pf=null;
 function status(i){
@@ -324,7 +322,7 @@ stage.addEventListener("touchend",(e)=>{
   lastTapT=now;
 },{capture:true});
 try{
-  pf=new St.PageFlip(bookEl,{width:794,height:1123,size:"stretch",minWidth:150,maxWidth:1600,minHeight:213,maxHeight:2263,showCover:true,usePortrait:false,flippingTime:550,maxShadowOpacity:0.55,drawShadow:true,mobileScrollSupport:false,showPageCorners:true,autoSize:true});
+  pf=new St.PageFlip(bookEl,{width:794,height:1123,size:"stretch",minWidth:300,maxWidth:1600,minHeight:424,maxHeight:2263,showCover:true,usePortrait:true,flippingTime:550,maxShadowOpacity:0.55,drawShadow:true,mobileScrollSupport:false,showPageCorners:true,autoSize:true});
   pf.loadFromHTML(bookEl.querySelectorAll(".page"));
   pf.on("flip",e=>status(e.data));
   pf.on("changeOrientation",()=>status(pf.getCurrentPageIndex()));
