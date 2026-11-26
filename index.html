@@ -80,12 +80,20 @@ footer button{width:100%;padding:0 6px}
    늘어나는 건 허용해 글자를 키운다 — 세로 여백은 넉넉해서 옆 콘텐츠를 가릴
    위험이 없다(실측 확인). 폭 비례 계산(--u) 대신 고정 px로 바꿔 브라우저별
    자동확대 차이에도 항상 같은 크기가 나오게 한다. */
+/* 2026-11-26 재재설계: 고정 px는 핀치줌으로 사진을 키워도 사이드바 글씨는 그대로라
+   "사진은 커지는데 글씨는 반대로 작아 보인다"는 실제 버그(사장님 스크린샷으로 확인
+   — 사진·사이드바가 서로 다른 메커니즘으로 움직인 것)였다. 사진은 zoomScale→pw→
+   .page 실제 폭 변화로 커지는데, 고정 px 글씨는 그 폭 변화와 무관해 상대적으로
+   따로 놀았던 것. 데스크톱과 동일하게 --u(=페이지 실제폭/794, 컨테이너쿼리) 기반
+   calc()로 되돌려 사진 확대/축소와 글씨가 항상 같은 비율로 함께 움직이게 한다.
+   배수(K)는 데스크톱 배수(15/14/13/12)와 다르게, 좁은 화면 기본 페이지폭(약
+   181px)에서 직전 승인된 절대 크기(6.48/5.4/5.04/4.68px)와 정확히 같아지도록
+   역산한 값 — 그러면서도 이제는 핀치줌에 비례해서 커지고 작아진다. */
 html.narrow .sb{height:auto!important;overflow:visible}
-html.narrow .sb .h{font-size:6.48px!important}
-html.narrow .sb .r{font-size:5.4px!important;flex-direction:column;align-items:flex-start;gap:1px}
-html.narrow .sb .r span:last-child{text-align:left}
-html.narrow .sb .a{font-size:5.04px!important}
-html.narrow .sb .n{font-size:4.68px!important}
+html.narrow .sb .h{font-size:calc(var(--u)*28.4261)!important}
+html.narrow .sb .r{font-size:calc(var(--u)*23.6884)!important}
+html.narrow .sb .a{font-size:calc(var(--u)*22.1092)!important}
+html.narrow .sb .n{font-size:calc(var(--u)*20.5299)!important}
 .sb .h{font-size:calc(var(--u)*15);font-weight:700;padding-bottom:calc(var(--u)*8);border-bottom:calc(var(--u)*2) solid #C9A24A}
 .sb .h.g{color:#C9A24A;margin-top:calc(var(--u)*18)}
 .sb .r{display:flex;justify-content:space-between;gap:calc(var(--u)*8);padding:calc(var(--u)*7) 0;border-bottom:1px solid #5A3D86;font-size:calc(var(--u)*14)}
