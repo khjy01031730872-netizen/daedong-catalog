@@ -502,6 +502,32 @@ if ("serviceWorker" in navigator) {
   const openBtn = document.getElementById("specBtn");
   if (!modal || !body || !openBtn) return;
 
+  // --- 2026-11-26 임시 진단 배지 (원인 확인 후 제거 예정) ---
+  // "크기를 줄여도 전혀 안 바뀐다"는 보고가 반복돼, 코드가 실제로 계산한 값과
+  // 화면에 실제로 보이는 크기가 다른지(기기/브라우저 자체의 "큰 글씨" 접근성
+  // 설정이 사이트 CSS 위에 덧씌워질 가능성) 확인하기 위해 화면 좌상단에
+  // 현재 코드가 계산한 실제 수치를 그대로 띄운다.
+  if (window.innerWidth <= 600) {
+    const diag = document.createElement("div");
+    diag.id = "diagBadge";
+    diag.style.cssText = "position:fixed;top:2px;left:2px;z-index:999;background:rgba(0,0,0,.8);color:#7CFC7C;font:10px/1.4 monospace;padding:5px 7px;border-radius:5px;max-width:96vw;white-space:pre-wrap;pointer-events:none";
+    document.body.appendChild(diag);
+    const updateDiag = () => {
+      const sb = Array.from(document.querySelectorAll(".sb")).find(s => s.getBoundingClientRect().width > 0);
+      let info = `innerW:${window.innerWidth} DPR:${window.devicePixelRatio}`;
+      if (sb) {
+        const r = sb.querySelector(".r");
+        const page = sb.closest(".page");
+        info += ` pageW:${Math.round(page.getBoundingClientRect().width)} sbW:${Math.round(sb.getBoundingClientRect().width)}`;
+        if (r) info += ` rFont(코드계산):${getComputedStyle(r).fontSize}`;
+      }
+      diag.textContent = info;
+    };
+    updateDiag();
+    setInterval(updateDiag, 1000);
+  }
+  // --- 진단 배지 끝 ---
+
   function openModal(){
     const sbs = Array.from(document.querySelectorAll(".sb")).filter(sb => sb.getBoundingClientRect().width > 0);
     body.innerHTML = "";
