@@ -30,6 +30,10 @@
 :root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
 *{box-sizing:border-box;min-width:0}
 html,body{height:100vh;height:100dvh;height:calc(var(--vh, 1vh) * 100)}
+/* transform:scale()로 .sb 크기를 직접 통제하는 이상, 브라우저가 추가로
+   또 자기 멋대로 글자를 확대하면 브라우저마다 결과가 달라져 버린다 —
+   그래서 자동확대 자체를 꺼서 내가 정한 scale()만 그대로 적용되게 한다. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
 /* 2026-11-26 재확인: text-size-adjust:100%로 안드로이드 자동확대를 꺼버리면
    오히려 더 안 좋았다 — 사장님이 "어제 다운로드해둔 버전"(이 자동확대를
    끄지 않고, font-size도 13/12대가 아니라 15/14대였던 버전, 커밋 838c862)과
@@ -62,6 +66,15 @@ footer button{width:100%;padding:0 6px}
 #err{display:none;padding:20px;text-align:center;color:var(--muted)}
 .page{container-type:inline-size}
 .sb{position:absolute;--u:calc(100cqw / 794);background:#3D1F6B;color:#fff;box-sizing:border-box;padding:calc(var(--u)*22) calc(var(--u)*18);display:flex;flex-direction:column;gap:calc(var(--u)*4);font-family:"Noto Sans KR",sans-serif;pointer-events:none}
+/* 2026-11-26: 브라우저마다("카카오톡 인앱" vs "삼성인터넷/크롬") 좁은 칸의 작은
+   글자를 자기 판단으로 확대하는 정도가 완전히 달라서(카카오 인앱은 거의 안
+   키워줌), 어떤 브라우저로 열든 항상 똑같이 나오게 하려면 그 자동확대에
+   기대면 안 된다 — 대신 .sb 박스 자체를 CSS transform:scale()로 확실하게
+   확대한다(브라우저 엔진과 무관하게 항상 동일하게 동작하는 기본 기능).
+   박스 폭 자체는 그대로 두고 "그려지는 크기"만 키우는 것이라, 옆 사진 위로
+   조금 겹쳐 보일 수 있지만(이미 pointer-events:none이라 사진 넘기기/확대에는
+   지장 없음) 모든 브라우저에서 예외 없이 같은 크기로 보장된다. */
+html.narrow .sb{transform:scale(1.9);transform-origin:top left}
 .sb .h{font-size:calc(var(--u)*15);font-weight:700;padding-bottom:calc(var(--u)*8);border-bottom:calc(var(--u)*2) solid #C9A24A}
 .sb .h.g{color:#C9A24A;margin-top:calc(var(--u)*18)}
 .sb .r{display:flex;justify-content:space-between;gap:calc(var(--u)*8);padding:calc(var(--u)*7) 0;border-bottom:1px solid #5A3D86;font-size:calc(var(--u)*14)}
