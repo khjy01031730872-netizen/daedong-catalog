@@ -58,6 +58,12 @@ main{flex:1 1 0;display:flex;align-items:center;justify-content:center;padding:1
 .page.--right::after{content:"";position:absolute;inset:0 auto 0 0;width:34px;background:linear-gradient(90deg,rgba(0,0,0,.16),transparent);pointer-events:none}
 .stf__parent{filter:drop-shadow(0 16px 30px rgba(10,4,24,.32))}
 footer{flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:14px 10px;width:92px}
+/* 2026-11-26: "전체화면"을 누르면 헤더·푸터(사이드바)를 아예 숨기고 책만
+   화면 전체를 쓰게 한다 — 네이티브 Fullscreen API가 안 되는 모바일
+   웹뷰(카카오톡 인앱 등)에서도 항상 동작하도록 CSS로 직접 처리. */
+body.fsmode header,body.fsmode footer{display:none}
+#fsExitBtn{display:none;position:fixed;top:max(10px,env(safe-area-inset-top,0px));right:max(10px,env(safe-area-inset-right,0px));z-index:70;min-height:40px;padding:0 16px;font-size:14px;border-radius:999px;border:1px solid var(--gold);background:rgba(42,17,80,.88);color:#fff;cursor:pointer}
+body.fsmode #fsExitBtn{display:inline-flex;align-items:center}
 button{font:inherit;font-size:15px;min-width:44px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--gold);background:var(--bar);color:#fff;cursor:pointer}
 button:disabled{opacity:.35;cursor:default}
 footer button{width:100%;padding:0 6px}
@@ -430,24 +436,47 @@ document.getElementById("form").addEventListener("submit",async e=>{
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
 }
-// "전체화면" 버튼 — 브라우저 Fullscreen API로 주소창·탭 등 브라우저 UI를 가리고
-// 화면 전체를 카탈로그로 채운다(2026-11-26 요청 — 확대/팬과는 별개의 기능).
+// "전체화면" 버튼 — 2026-11-26 재요청: 카카오톡 인앱 브라우저 등 모바일
+// 웹뷰는 브라우저 Fullscreen API 자체를 지원 안 하는 경우가 많아(눌러도
+// 조용히 실패), 그것만 믿지 않는다 — 대신 헤더/푸터(사이드바)를 직접
+// CSS로 숨겨서 책이 쓸 수 있는 공간을 넓히는 "UI 전체화면"을 기본으로
+// 하고, 네이티브 Fullscreen API는 지원되면 덤으로 같이 시도한다.
+// 전체화면 상태에서는 헤더 전체가 사라지므로, 다시 누를 수 있는 작은
+// "축소" 버튼을 화면 모서리에 따로 띄워둔다.
 (function(){
   const btn = document.getElementById("fullscreenBtn");
   if (!btn) return;
-  function isFs(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
-  function updateLabel(){ btn.textContent = isFs() ? "⛶ 전체화면 종료" : "⛶ 전체화면"; }
-  btn.onclick = () => {
-    if (!isFs()) {
-      const req = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
-      if (req) req.call(document.documentElement).catch(()=>{});
-    } else {
+  const exitBtn = document.createElement("button");
+  exitBtn.type = "button";
+  exitBtn.id = "fsExitBtn";
+  exitBtn.textContent = "⛶ 축소";
+  document.body.appendChild(exitBtn);
+
+  function isNativeFs(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+  function enter(){
+    document.body.classList.add("fsmode");
+    const req = document.documentElement.requestFullscreen || document.documentElement.webkitRequestFullscreen;
+    if (req) req.call(document.documentElement).catch(()=>{});
+    // 2026-11-26 실측 발견: 여기서 바로 pf를 참조하면 "pf is not defined"가 난다
+    // (이 IIFE가 let pf 선언부와 같은 블록인데도 재현됨, 원인 미상) — 대신
+    // 이미 정상 동작 중인 resize 핸들러(그 핸들러 자신의 스코프에서는 pf 접근이
+    // 되는 게 확인됨)에 맡기면 안전하게 같은 효과를 낸다.
+    setTimeout(()=>window.dispatchEvent(new Event("resize")), 60);
+  }
+  function leave(){
+    document.body.classList.remove("fsmode");
+    if (isNativeFs()) {
       const exit = document.exitFullscreen || document.webkitExitFullscreen;
       if (exit) exit.call(document).catch(()=>{});
     }
-  };
-  document.addEventListener("fullscreenchange", updateLabel);
-  document.addEventListener("webkitfullscreenchange", updateLabel);
+    setTimeout(()=>window.dispatchEvent(new Event("resize")), 60);
+  }
+  btn.onclick = enter;
+  exitBtn.onclick = leave;
+  // 네이티브 전체화면을 기기 자체 버튼(뒤로가기 등)으로 빠져나간 경우에도
+  // UI 전체화면 상태를 같이 해제한다.
+  document.addEventListener("fullscreenchange", () => { if (!isNativeFs()) leave(); });
+  document.addEventListener("webkitfullscreenchange", () => { if (!isNativeFs()) leave(); });
 })();
 // "앱 설치" 버튼 — 인터넷 링크(https)로 열었을 때만 동작한다(다운로드 파일은
 // manifest를 못 불러와 설치 자체가 불가능 — 실측 확인, 2026-11-25).
