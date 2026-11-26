@@ -51,12 +51,12 @@ button:disabled{opacity:.35;cursor:default}
 #err{display:none;padding:20px;text-align:center;color:var(--muted)}
 .page{container-type:inline-size}
 .sb{position:absolute;--u:calc(100cqw / 794);background:#3D1F6B;color:#fff;box-sizing:border-box;padding:calc(var(--u)*22) calc(var(--u)*18);display:flex;flex-direction:column;gap:calc(var(--u)*4);font-family:"Noto Sans KR",sans-serif;pointer-events:none}
-.sb .h{font-size:calc(var(--u)*13);font-weight:700;padding-bottom:calc(var(--u)*8);border-bottom:calc(var(--u)*2) solid #C9A24A}
-.sb .h.g{color:#C9A24A;margin-top:calc(var(--u)*20)}
-.sb .r{display:flex;justify-content:space-between;gap:calc(var(--u)*8);padding:calc(var(--u)*8) 0;border-bottom:1px solid #5A3D86;font-size:calc(var(--u)*12)}
+.sb .h{font-size:calc(var(--u)*15);font-weight:700;padding-bottom:calc(var(--u)*8);border-bottom:calc(var(--u)*2) solid #C9A24A}
+.sb .h.g{color:#C9A24A;margin-top:calc(var(--u)*18)}
+.sb .r{display:flex;justify-content:space-between;gap:calc(var(--u)*8);padding:calc(var(--u)*7) 0;border-bottom:1px solid #5A3D86;font-size:calc(var(--u)*14)}
 .sb .r span:first-child{color:#CBBBE3;flex:none}.sb .r span:last-child{font-weight:500;text-align:right}
-.sb .a{font-size:calc(var(--u)*12);color:#E4DAF2;line-height:1.9}
-.sb .n{margin-top:auto;font-size:calc(var(--u)*11);line-height:1.6;color:#CBBBE3}
+.sb .a{font-size:calc(var(--u)*13);color:#E4DAF2;line-height:1.75}
+.sb .n{margin-top:auto;font-size:calc(var(--u)*12);line-height:1.5;color:#CBBBE3}
 dialog{border:none;border-radius:14px;padding:0;width:min(560px,94vw);max-height:90vh;color:#241B33;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 dialog::backdrop{background:rgba(20,11,38,.55)}
 .dlg{padding:20px 22px;display:flex;flex-direction:column;gap:12px}
@@ -72,9 +72,12 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
 #kakaoShareBtn{background:#FEE500;color:#191600;border-color:#FEE500;font-weight:700;display:none}
 #kakaoShareBtn.ready{display:inline-flex}
 /* 2026-11-25: "크게 보기" 버튼 방식 대신 마우스 스크롤(휠)·손가락 핀치로 직접 확대/축소하는 방식으로 교체 */
-#stage.zoomed{overflow:auto;justify-content:flex-start;-webkit-overflow-scrolling:touch;cursor:grab;-webkit-user-select:none;user-select:none}
-#stage.zoomed #wrap{margin:0 auto}
+/* 2026-11-26: 스크롤바 기반 이동(overflow:auto)은 콘텐츠 가장자리에서 더 이상 못
+   움직이는 "제한"이 느껴진다는 지적 — transform(translate)으로 직접 옮기는 방식으로
+   교체해, 마우스/손가락이 움직인 만큼 그대로(한계 없이) 따라가게 한다. */
+#stage.zoomed{cursor:grab;-webkit-user-select:none;user-select:none}
 #stage.zoomed.dragging{cursor:grabbing}
+#wrap{transform:translate(0,0)}
 .zoomhint{position:fixed;bottom:64px;left:50%;transform:translateX(-50%);z-index:40;background:rgba(42,17,80,.85);
   color:#fff;border:1px solid var(--gold);border-radius:999px;padding:4px 12px;font-size:12px;pointer-events:none;
   opacity:0;transition:opacity .25s}
@@ -191,11 +194,15 @@ function showZoomhint(){
   clearTimeout(zoomhintTimer);
   zoomhintTimer=setTimeout(()=>zoomhint.classList.remove("show"), 900);
 }
+function applyPanTransform(){
+  wrap.style.transform=`translate(${panX}px, ${panY}px)`;
+}
 function applyZoom(next){
   const clamped=Math.max(1, Math.min(2.6, next));
   if(clamped===zoomScale) return;
   zoomScale=clamped;
   stage.classList.toggle("zoomed", zoomScale>1.001);
+  if(zoomScale<=1.001){ panX=0; panY=0; applyPanTransform(); }
   fit();
   if(pf&&pf.update) pf.update();
   showZoomhint();
@@ -212,17 +219,19 @@ stage.addEventListener("wheel",(e)=>{
 // 상하좌우 스크롤 이동시킨다. 책 위 드래그는 StPageFlip 자체의 "넘기기" 제스처와 겹치므로,
 // 확대 중(zoomScale>1)에는 캡처 단계에서 가로채 PageFlip에 이벤트가 전달되기 전에 이동으로
 // 처리한다(100% 상태에서는 그대로 두어 기존 드래그-넘기기 동작을 유지).
-let isPanning=false, panX=0, panY=0, panSL=0, panST=0;
+let isPanning=false, panX=0, panY=0, panStartX=0, panStartY=0, panBaseX=0, panBaseY=0;
 function panStart(x,y){
   isPanning=true;
   stage.classList.add("dragging");
-  panX=x; panY=y;
-  panSL=stage.scrollLeft; panST=stage.scrollTop;
+  panStartX=x; panStartY=y;
+  panBaseX=panX; panBaseY=panY;
 }
 function panMove(x,y){
   if(!isPanning) return;
-  stage.scrollLeft=panSL-(x-panX);
-  stage.scrollTop=panST-(y-panY);
+  // 한계(클램프) 없이 마우스/손가락이 움직인 만큼 그대로 이동시킨다(2026-11-26 요청).
+  panX=panBaseX+(x-panStartX);
+  panY=panBaseY+(y-panStartY);
+  applyPanTransform();
 }
 function panEnd(){
   if(isPanning){ isPanning=false; stage.classList.remove("dragging"); }
@@ -305,7 +314,7 @@ function fillSB(box,ci){
   const sp=spec(ci);
   box.append(mk("div","h","주요 사양"));
   const vals=Object.fromEntries((sp.rows||[]).map(r=>[r[0],r[1]]));
-  for(const k of KEYS){if(k==="기초"){const s=mk("div","h g","설치방식");s.style.marginTop="calc(var(--u)*12)";s.style.borderBottom="none";s.style.paddingBottom="0";s.style.fontSize="calc(var(--u)*12)";box.append(s);}const r=mk("div","r");r.append(mk("span",null,k),mk("span",null,vals[k]||DEFV[k]||"—"));box.append(r);}
+  for(const k of KEYS){if(k==="기초"){const s=mk("div","h g","설치방식");s.style.marginTop="calc(var(--u)*12)";s.style.borderBottom="none";s.style.paddingBottom="0";s.style.fontSize="calc(var(--u)*13)";box.append(s);}const r=mk("div","r");r.append(mk("span",null,k),mk("span",null,vals[k]||DEFV[k]||"—"));box.append(r);}
   box.append(mk("div","h g","납품 분야"));
   for(const a of (sp.apps||[]).filter(Boolean)) box.append(mk("div","a","· "+a));
   const n=mk("div","n");n.append("규격 외 높이·색상은",document.createElement("br"),"현장 조건에 맞춰 제작 가능");box.append(n);
