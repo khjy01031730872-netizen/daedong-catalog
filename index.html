@@ -79,7 +79,16 @@ footer button{width:100%;padding:0 6px}
 .hint{position:absolute;bottom:4px;left:0;right:0;text-align:center;font-size:13px;color:var(--muted)}
 #err{display:none;padding:20px;text-align:center;color:var(--muted)}
 .page{container-type:inline-size}
-.sb{position:absolute;--u:calc(100cqw / 794);background:#3D1F6B;color:#fff;box-sizing:border-box;padding:calc(var(--u)*22) calc(var(--u)*18);display:flex;flex-direction:column;gap:calc(var(--u)*4);font-family:"Noto Sans KR",sans-serif;pointer-events:none}
+/* 2026-11-26 최종 근본수정: 카카오톡 등 안드로이드 인앱 브라우저(WebView)는
+   8px 미만 글씨를 강제로 8px로 키운다(앱 설정, CSS로 못 막음 — 최소글꼴 8px 조건으로
+   재현해 사장님 스크린샷과 동일하게 줄바꿈되는 것 실측 확인). 폰에서는 계산 글씨가
+   3.2px라 8px로 강제 확대→줄바꿈, 260% 확대 시엔 8.3px라 정상으로 보였던 것.
+   해결: 사이드바 내용(.sbi)을 원래 디자인 크기(794px 기준, 글씨 15/14/13/12px)로
+   그린 뒤 transform:scale(페이지폭/794)로 통째로 축소한다 — 축소는 그림 단계에서
+   일어나 최소글꼴 제한에 걸리지 않고, 데스크톱과 100% 동일한 모양이 그대로 작아진다.
+   배율은 JS(layoutSB, ResizeObserver)가 페이지 실제 폭으로 계산해 넣는다. */
+.sb{position:absolute;background:#3D1F6B;overflow:hidden;pointer-events:none}
+.sbi{position:absolute;left:0;top:0;transform-origin:0 0;box-sizing:border-box;padding:22px 18px;display:flex;flex-direction:column;gap:4px;color:#fff;font-family:"Noto Sans KR",sans-serif}
 /* 2026-11-26 재설계: transform:scale()로 박스 자체를 키우면 사진·설명문구가
    붙어있는 일부 페이지("메쉬 휀스" 등, 사진 옆에 문장이 바로 붙은 템플릿)에서
    글자를 가려버리는 실제 사고가 발생(사장님 스크린샷으로 "음선"처럼 잘린
@@ -103,12 +112,13 @@ footer button{width:100%;padding:0 6px}
    무관하게 이 배수로만 결정된다 — 그래서 폰에서는 데스크톱보다 항상 1.7~1.9배 커
    보였던 것(캐시 문제 아님). 사장님 지시("데스크탑 글씨폰트 크기로")대로 폰 전용
    규칙을 전부 없애고 데스크톱과 100% 동일한 아래 .sb 공통 규칙을 그대로 쓴다. */
-.sb .h{font-size:calc(var(--u)*15);font-weight:700;padding-bottom:calc(var(--u)*8);border-bottom:calc(var(--u)*2) solid #C9A24A}
-.sb .h.g{color:#C9A24A;margin-top:calc(var(--u)*18)}
-.sb .r{display:flex;justify-content:space-between;gap:calc(var(--u)*8);padding:calc(var(--u)*7) 0;border-bottom:1px solid #5A3D86;font-size:calc(var(--u)*14)}
-.sb .r span:first-child{color:#CBBBE3;flex:none}.sb .r span:last-child{font-weight:500;text-align:right}
-.sb .a{font-size:calc(var(--u)*13);color:#E4DAF2;line-height:1.75}
-.sb .n{margin-top:auto;font-size:calc(var(--u)*12);line-height:1.5;color:#CBBBE3}
+.sbi .h{font-size:15px;font-weight:700;padding-bottom:8px;border-bottom:2px solid #C9A24A}
+.sbi .h.g{color:#C9A24A;margin-top:18px}
+.sbi .h.sub{margin-top:12px;border-bottom:none;padding-bottom:0;font-size:13px}
+.sbi .r{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:calc(var(--inv,1)*1px) solid #5A3D86;font-size:14px}
+.sbi .r span:first-child{color:#CBBBE3;flex:none}.sbi .r span:last-child{font-weight:500;text-align:right}
+.sbi .a{font-size:13px;color:#E4DAF2;line-height:1.75}
+.sbi .n{margin-top:auto;font-size:12px;line-height:1.5;color:#CBBBE3}
 .spec-modal{position:fixed;inset:0;z-index:60;display:none}
 .spec-modal.open{display:block}
 .spec-modal-backdrop{position:absolute;inset:0;background:rgba(20,11,38,.6)}
@@ -116,6 +126,7 @@ footer button{width:100%;padding:0 6px}
 .spec-modal-close{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-size:17px;cursor:pointer}
 .spec-modal-body .h{font-size:19px;font-weight:700;padding-bottom:10px;border-bottom:2px solid #C9A24A}
 .spec-modal-body .h.g{color:#C9A24A;margin-top:22px}
+.spec-modal-body .h.sub{margin-top:16px;border-bottom:none;padding-bottom:0;font-size:16px}
 .spec-modal-body .r{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #5A3D86;font-size:15px}
 .spec-modal-body .r span:first-child{color:#CBBBE3;flex:none}
 .spec-modal-body .r span:last-child{font-weight:500;text-align:right}
@@ -179,7 +190,7 @@ html.narrow .zoomhint{bottom:64px}
 <script>try{document.documentElement.classList.toggle("narrow",(window.visualViewport?window.visualViewport.width:window.innerWidth)<=600);}catch(e){}</script>
 <header>
   <h1><b>DDF</b>대동울타리 제품 카탈로그</h1>
-  <div style="background:#ff2d55;color:#fff;font:700 13px/1.3 monospace;padding:4px 8px;border-radius:6px;text-align:center">버전확인:VER-20261126-3</div>
+  <div style="background:#ff2d55;color:#fff;font:700 13px/1.3 monospace;padding:4px 8px;border-radius:6px;text-align:center">버전확인:VER-20261126-4</div>
   <div><a id="pdfBtn" href="대동울타리_제품카탈로그.pdf" download style="display:flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid #C9A24A;background:#3D1F6B;color:#fff;text-decoration:none;font-size:15px;text-align:center">PDF 다운로드</a><button id="editBtn" type="button" style="display:none">주요 사양 수정</button>
   <label><span style="position:absolute;left:-9999px">목차로 이동</span><select id="toc" aria-label="목차로 이동"></select></label>
   <button id="fullscreenBtn" type="button">⛶ 전체화면</button>
@@ -408,7 +419,7 @@ function fillSB(box,ci){
   const sp=spec(ci);
   box.append(mk("div","h","주요 사양"));
   const vals=Object.fromEntries((sp.rows||[]).map(r=>[r[0],r[1]]));
-  for(const k of KEYS){if(k==="기초"){const s=mk("div","h g","설치방식");s.style.marginTop="calc(var(--u)*12)";s.style.borderBottom="none";s.style.paddingBottom="0";s.style.fontSize="calc(var(--u)*13)";box.append(s);}const r=mk("div","r");r.append(mk("span",null,k),mk("span",null,vals[k]||DEFV[k]||"—"));box.append(r);}
+  for(const k of KEYS){if(k==="기초")box.append(mk("div","h g sub","설치방식"));const r=mk("div","r");r.append(mk("span",null,k),mk("span",null,vals[k]||DEFV[k]||"—"));box.append(r);}
   box.append(mk("div","h g","납품 분야"));
   for(const a of (sp.apps||[]).filter(Boolean)) box.append(mk("div","a","· "+a));
   const n=mk("div","n");n.append("규격 외 높이·색상은",document.createElement("br"),"현장 조건에 맞춰 제작 가능");box.append(n);
@@ -416,11 +427,23 @@ function fillSB(box,ci){
 const sbs=[];
 for(const im of bookEl.querySelectorAll("img[data-p]")){
   const m=META[im.dataset.p]; if(!m) continue;
-  const [x,y,w,h]=m.r, d=mk("div","sb");
+  const [x,y,w,h]=m.r, d=mk("div","sb"), inner=mk("div","sbi");
   Object.assign(d.style,{left:(x/794*100)+"%",top:(y/1123*100)+"%",width:(w/794*100)+"%",height:(h/1123*100)+"%"});
-  im.parentNode.append(d); sbs.push([d,m.ci]); fillSB(d,m.ci);
+  // 내용은 원래 디자인 크기(794px 기준 w×h)로 그리고, 페이지 실제 폭에 맞춰 통째로 축소한다.
+  Object.assign(inner.style,{width:w+"px",height:h+"px"});
+  d.append(inner); im.parentNode.append(d); sbs.push([inner,m.ci]); fillSB(inner,m.ci);
 }
 const redraw=()=>sbs.forEach(([d,ci])=>fillSB(d,ci));
+function layoutSB(page){
+  const pw=page.offsetWidth; if(!pw) return;
+  const u=pw/794, inner=page.querySelector(".sbi"); if(!inner) return;
+  inner.style.transform=`scale(${u})`;
+  inner.style.setProperty("--inv", String(Math.max(1,1/u)));
+}
+const sbPages=sbs.map(([inner])=>inner.parentNode.parentNode);
+if(window.ResizeObserver){ const ro=new ResizeObserver(es=>es.forEach(e=>layoutSB(e.target))); sbPages.forEach(p=>ro.observe(p)); }
+const layoutAllSB=()=>sbPages.forEach(layoutSB);
+layoutAllSB(); addEventListener("resize",()=>setTimeout(layoutAllSB,60));
 const dlgEl=document.getElementById("dlg"), cat=document.getElementById("cat"), msg=document.getElementById("msg");
 cat.innerHTML=NAMES.map((n,i)=>`<option value="${i}">${String(i+1).padStart(2,"0")} ${n}</option>`).join("");
 function loadForm(){
@@ -584,7 +607,7 @@ if ("serviceWorker" in navigator) {
     } else {
       sbs.forEach((sb, idx) => {
         if (idx > 0) body.appendChild(document.createElement("hr")).className = "spec-modal-sep";
-        const clone = sb.cloneNode(true);
+        const clone = (sb.querySelector(".sbi") || sb).cloneNode(true);
         body.append(...clone.childNodes);
       });
     }
