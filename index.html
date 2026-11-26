@@ -61,6 +61,21 @@ footer button{width:100%;padding:0 6px}
 .sb .r span:first-child{color:#CBBBE3;flex:none}.sb .r span:last-child{font-weight:500;text-align:right}
 .sb .a{font-size:calc(var(--u)*12);color:#E4DAF2;line-height:1.65}
 .sb .n{margin-top:auto;font-size:calc(var(--u)*11.5);line-height:1.45;color:#CBBBE3}
+.spec-modal{position:fixed;inset:0;z-index:60;display:none}
+.spec-modal.open{display:block}
+.spec-modal-backdrop{position:absolute;inset:0;background:rgba(20,11,38,.6)}
+.spec-modal-card{position:relative;max-width:380px;margin:12vh auto 0;background:#3D1F6B;color:#fff;border-radius:16px;padding:26px 20px 20px;max-height:74vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.45);font-family:"Noto Sans KR",sans-serif}
+.spec-modal-close{position:absolute;top:10px;right:10px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;font-size:17px;cursor:pointer}
+.spec-modal-body .h{font-size:19px;font-weight:700;padding-bottom:10px;border-bottom:2px solid #C9A24A}
+.spec-modal-body .h.g{color:#C9A24A;margin-top:22px}
+.spec-modal-body .r{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #5A3D86;font-size:15px}
+.spec-modal-body .r span:first-child{color:#CBBBE3;flex:none}
+.spec-modal-body .r span:last-child{font-weight:500;text-align:right}
+.spec-modal-body .a{font-size:14px;color:#E4DAF2;line-height:1.75;margin-top:4px}
+.spec-modal-body .n{margin-top:18px;font-size:13px;line-height:1.55;color:#CBBBE3}
+.spec-modal-body .spec-modal-sep{margin:18px 0;border:none;border-top:1px dashed #6B4E97}
+#specBtn{display:none}
+@media(max-width:600px){#specBtn{display:inline-flex}}
 dialog{border:none;border-radius:14px;padding:0;width:min(560px,94vw);max-height:90vh;color:#241B33;background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.4)}
 dialog::backdrop{background:rgba(20,11,38,.55)}
 .dlg{padding:20px 22px;display:flex;flex-direction:column;gap:12px}
@@ -86,7 +101,7 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
   color:#fff;border:1px solid var(--gold);border-radius:999px;padding:4px 12px;font-size:12px;pointer-events:none;
   opacity:0;transition:opacity .25s}
 .zoomhint.show{opacity:1}
-#fullscreenBtn{background:#3D1F6B}
+#fullscreenBtn,#specBtn{background:#3D1F6B}
 @media(max-width:600px){.grid2{grid-template-columns:minmax(0,1fr)}}
 
 /* 2026-11-26: 넓은(가로) 화면은 좌우 사이드바가 맞지만, 세로로 긴 폰 화면에서는
@@ -102,7 +117,7 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
   footer button{width:auto;padding:0 10px;min-height:34px;min-width:34px;font-size:13px}
   #first,#last{display:none}
   .hint{font-size:11px;bottom:2px}
-  #pdfBtn,#installBtn,#kakaoShareBtn,#fullscreenBtn{min-height:34px;padding:0 12px;font-size:13px}
+  #pdfBtn,#installBtn,#kakaoShareBtn,#fullscreenBtn,#specBtn{min-height:34px;padding:0 12px;font-size:13px}
   select{min-height:34px;font-size:14px}
   .zoomhint{bottom:64px}
 }
@@ -114,6 +129,7 @@ dialog::backdrop{background:rgba(20,11,38,.55)}
   <div><a id="pdfBtn" href="대동울타리_제품카탈로그.pdf" download style="display:flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:999px;border:1px solid #C9A24A;background:#3D1F6B;color:#fff;text-decoration:none;font-size:15px;text-align:center">PDF 다운로드</a><button id="editBtn" type="button" style="display:none">주요 사양 수정</button>
   <label><span style="position:absolute;left:-9999px">목차로 이동</span><select id="toc" aria-label="목차로 이동"></select></label>
   <button id="fullscreenBtn" type="button">⛶ 전체화면</button>
+  <button id="specBtn" type="button">🔍 주요사양</button>
   <button id="installBtn" type="button">📲 앱 설치</button>
   <button id="kakaoShareBtn" type="button">💬 카카오톡 공유</button></div>
 </header>
@@ -445,6 +461,60 @@ if ("serviceWorker" in navigator) {
       buttons: [{ title: "카탈로그 보기", link: { mobileWebUrl: url, webUrl: url } }]
     });
   };
+})();
+</script>
+<div id="specModal" class="spec-modal" aria-hidden="true">
+  <div class="spec-modal-backdrop" id="specModalBackdrop"></div>
+  <div class="spec-modal-card" role="dialog" aria-modal="true" aria-label="주요 사양">
+    <button type="button" class="spec-modal-close" id="specModalClose" aria-label="닫기">✕</button>
+    <div class="spec-modal-body" id="specModalBody"></div>
+  </div>
+</div>
+<script>
+// 2026-11-26 실측 발견: 모바일 "펼침(두 페이지)" 보기에서 페이지 실폭이 ~180px까지
+// 줄어들면, 디자인 원본 비율(가로 25%)로 고정된 .sb 박스 폭이 ~45px밖에 안 되어
+// 글자 크기를 아무리 조정해도(컨테이너쿼리 비례) 라벨+값이 2~3글자씩 쪼개져
+// 읽을 수 없게 된다(사장님 실제 폰 스크린샷으로 확인). 근본 해결은 박스 자체를
+// 넓히거나 103페이지 레이아웃을 재설계하는 것이지만, 그건 큰 작업이라 — 대신
+// (1차 시도: 박스 안에 작은 아이콘을 심었으나, 45px짜리 박스 안에서는 "탭 가능한
+// 최소 크기"조차 주변 3px 글자에 비해 압도적으로 커 보여 실제로도 제목 줄을
+// 가리는 문제가 실측으로 확인됨 — 폐기) 대신 헤더의 기존 "전체화면"/"앱설치"
+// 버튼과 같은 줄에 "🔍 주요사양" 버튼을 하나 두고(좁은 화면 전용), 누르면 현재
+// 펼쳐진 페이지(1~2장)의 주요사양 내용을 화면 중앙에 고정 크기(뷰포트 폭과
+// 무관)로 띄운다 — 탭 대상이 헤더의 정상 크기 버튼이라 오탭 걱정이 없다.
+(function(){
+  const modal = document.getElementById("specModal");
+  const body = document.getElementById("specModalBody");
+  const openBtn = document.getElementById("specBtn");
+  if (!modal || !body || !openBtn) return;
+
+  function openModal(){
+    const sbs = Array.from(document.querySelectorAll(".sb")).filter(sb => sb.getBoundingClientRect().width > 0);
+    body.innerHTML = "";
+    if (sbs.length === 0) {
+      body.textContent = "현재 페이지에는 주요 사양 정보가 없습니다.";
+    } else {
+      sbs.forEach((sb, idx) => {
+        if (idx > 0) body.appendChild(document.createElement("hr")).className = "spec-modal-sep";
+        const clone = sb.cloneNode(true);
+        body.append(...clone.childNodes);
+      });
+    }
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+  }
+  function closeModal(){
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+  }
+
+  openBtn.addEventListener("click", openModal);
+  document.addEventListener("click", (e) => {
+    if (e.target.id === "specModalBackdrop" || e.target.id === "specModalClose") closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal.classList.contains("open")) closeModal();
+  });
 })();
 </script>
 </body>
